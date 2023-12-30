@@ -69,6 +69,8 @@ namespace LlmSandbox.Api
       });
 
       services.AddHttpContextAccessor();
+      services.AddHttpClient();
+      services.Configure<OaiSettings>(Configuration.GetSection(nameof(OaiSettings)));
     }
 
     /// <summary>
