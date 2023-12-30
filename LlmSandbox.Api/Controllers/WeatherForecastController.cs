@@ -1,4 +1,5 @@
 using LlmSandbox.Api.Domains.Dtos;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LlmSandbox.Api.Controllers
@@ -30,5 +31,23 @@ namespace LlmSandbox.Api.Controllers
             })
             .ToArray();
         }
+
+        [HttpPost]
+        [Route("/file")]
+        public async Task<ActionResult<string>> PostAsync([FromBody] PostRequest request)
+        {
+            var response = request.Text;
+            var bytes = Convert.FromBase64String(request.Image);
+            MemoryStream stream = new MemoryStream(bytes);
+            var file = new FormFile(stream, 0, bytes.Length, "test", "test");
+            return Ok(response + file.Name);
+        }
+    }
+
+    public class PostRequest
+    {
+        public string Text { get; set; }
+
+        public string Image { get; set; }
     }
 }
