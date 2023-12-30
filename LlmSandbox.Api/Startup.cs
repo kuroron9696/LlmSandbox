@@ -69,6 +69,7 @@ namespace LlmSandbox.Api
       });
 
       services.AddHttpContextAccessor();
+      services.AddHttpClient();
     }
 
     /// <summary>

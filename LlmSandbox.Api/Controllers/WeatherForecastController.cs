@@ -1,6 +1,9 @@
-using LlmSandbox.Api.Domains.Dtos;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+
+using LlmSandbox.Api.Domains.Dtos;
+using System.Net.Mime;
+using System.Text;
 
 namespace LlmSandbox.Api.Controllers
 {
@@ -14,10 +17,12 @@ namespace LlmSandbox.Api.Controllers
         };
 
         private readonly ILogger<WeatherForecastController> _logger;
+        private readonly HttpClient _httpClient;
 
-        public WeatherForecastController(ILogger<WeatherForecastController> logger)
+        public WeatherForecastController(ILogger<WeatherForecastController> logger, IHttpClientFactory clientFactory)
         {
             _logger = logger;
+            _httpClient = clientFactory.CreateClient();
         }
 
         [HttpGet(Name = "GetWeatherForecast")]
@@ -36,11 +41,40 @@ namespace LlmSandbox.Api.Controllers
         [Route("/file")]
         public async Task<ActionResult<string>> PostAsync([FromBody] PostRequest request)
         {
-            var response = request.Text;
-            var bytes = Convert.FromBase64String(request.Image);
-            MemoryStream stream = new MemoryStream(bytes);
-            var file = new FormFile(stream, 0, bytes.Length, "test", "test");
-            return Ok(response + file.Name);
+            var body = @$"{{
+    ""messages"": [ 
+        {{
+            ""role"": ""system"", 
+            ""content"": ""You are a helpful assistant."" 
+        }},
+        {{
+            ""role"": ""user"", 
+            ""content"": [
+	            {{
+	                ""type"": ""text"",
+	                ""text"": ""写真の内容を説明して:""
+	            }},
+	            {{
+	                ""type"": ""image_url"",
+	                ""image_url"": {{
+                        ""url"": ""{request.Image}""
+                    }}
+                }} 
+           ] 
+        }}
+    ],
+    ""max_tokens"": 100, 
+    ""stream"": false 
+}}";
+            var resourceName = string.Empty;
+            var deploymentName = string.Empty;
+            var baseUrl = $"https://{resourceName}.openai.azure.com/openai/deployments/{deploymentName}/chat/completions?api-version=2023-12-01-preview";
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, baseUrl);
+            httpRequest.Headers.Add("api-key", string.Empty);
+            httpRequest.Content = new StringContent(body, Encoding.UTF8, MediaTypeNames.Application.Json);
+            var response = await _httpClient.SendAsync(httpRequest);
+            var content = await response.Content.ReadAsStringAsync();
+            return Ok(content);
         }
     }
 
